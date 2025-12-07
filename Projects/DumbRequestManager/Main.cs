@@ -102,21 +102,22 @@ public class Main : CPHInlineBase
         }
 
         string firstArgument = rawMsg.Split(' ')[0];
-
-        // bsr with valid user mention instead of bsr
-        if (TryGetUserMention(firstArgument))
-        {
-            CPH.SendMessage($"{firstArgument} {HOWTO}", true, false);
-            return false;
-        }
-
+        
         // the actual check
         if (!Helpers.IsValidHex(firstArgument))
         {
-            CPH.SendMessage(SEARCH_HOWTO, true, false);
+            // bsr with valid user mention instead of bsr
+            if (TryGetUserMention(firstArgument))
+            {
+                CPH.SendMessage($"{firstArgument} {HOWTO}", true, false);
+            }
+            else
+            {
+                CPH.SendMessage(SEARCH_HOWTO, true, false);
+            }
             return false;
         } 
-        
+
         // ok we're good
         bsrCode = firstArgument;
         return true;
@@ -145,7 +146,6 @@ public class Main : CPHInlineBase
 
         var args = rawMsg.Split(' ');
         string firstArgument = args[0];
-        string secondArgument = args[1];
 
         // the actual check
         if (!Helpers.IsValidHex(firstArgument))
@@ -154,11 +154,16 @@ public class Main : CPHInlineBase
             return false;
         } 
 
-        if (TryGetUserMention(secondArgument))
+        if (args.Length > 1)
         {
-            originalRequester = secondArgument;
+            string secondArgument = args[1];
+            if (TryGetUserMention(secondArgument))
+            {
+                originalRequester = secondArgument;
+            }
         }
 
+        bsrCode = firstArgument;
         return true;
     }
 
@@ -195,7 +200,7 @@ public class Main : CPHInlineBase
 
     public bool SpeakRequestInfo(string bsrCode, string userName, bool IsModAdd = false)
     {
-        string messageToSpeak = $"{userName} {(IsModAdd ? "modadded" : "requested")}";
+        string messageToSpeak = $"{userName} {(IsModAdd ? "modadded" : "requested")} ";
 
         HttpResponseMessage res = 
             _httpClient.GetAsync($"https://api.beatsaver.com/maps/id/{bsrCode}")   
@@ -213,7 +218,12 @@ public class Main : CPHInlineBase
             string content = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
             JObject parsed = JObject.Parse(content);
-            messageToSpeak += $"bsr {bsrCode} {(string)parsed.SelectToken("metadata.songName")} by {(string)parsed.SelectToken("metadata.songAuthorName")} mapped by {(string)parsed.SelectToken("metadata.levelAuthorName")}";
+            messageToSpeak += $"bsr {bsrCode}";
+
+            if (!IsModAdd)
+            {
+                messageToSpeak += $" {(string)parsed.SelectToken("metadata.songName")} by {(string)parsed.SelectToken("metadata.songAuthorName")} mapped by {(string)parsed.SelectToken("metadata.levelAuthorName")}";
+            }
 
             CPH.TtsSpeak(TTS_VOICE, messageToSpeak.ToString(), false);
 
@@ -317,7 +327,7 @@ public class Main : CPHInlineBase
 
 
         CPH.SetArgument("bsr", bsrCode);
-        CPH.SetArgument("requester", originalRequester);
+        CPH.SetArgument("originalRequester", originalRequester);
 
         return true;
     }
