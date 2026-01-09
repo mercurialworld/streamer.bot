@@ -167,6 +167,71 @@ public class Main : CPHInlineBase
         return true;
     }
 
+    public bool RemoveBSRCheck()
+    {
+        if (!CPH.TryGetArg("userName", out string userName) || !CPH.TryGetArg("rawInput", out string rawInput))
+        {
+            return false;
+        }
+
+        var userInfo = CPH.TwitchGetUserInfoByLogin(userName);
+
+        // wrong permissions
+        if (!userInfo.IsModerator) 
+        {
+            CPH.SendMessage("You must be a Moderator to use this command.", true, false);
+            return false;
+        }
+
+        // without any arguments
+        if (string.IsNullOrEmpty(rawInput))
+        {
+            CPH.SendMessage("You're missing a code!", true, false);
+            return false;
+        }
+
+        var args = rawInput.Split(' ');
+        string firstArgument = args[0];
+
+        // the actual check
+        if (!Helpers.IsValidHex(firstArgument))
+        {
+            CPH.SendMessage("Invalid BSR code!", true, false);
+            return false;
+        } 
+
+        CPH.SetArgument("bsr", firstArgument);
+        return true;
+    }
+
+    public bool OopsBSRCheck()
+    {
+        if (!CPH.TryGetArg("userName", out string userName) || !CPH.TryGetArg("rawInput", out string rawInput))
+        {
+            return false;
+        }
+
+        // without any arguments
+        if (string.IsNullOrEmpty(rawInput))
+        {
+            return true;
+        }
+
+        var args = rawInput.Split(' ');
+        string firstArgument = args[0];
+
+        // the actual check
+        if (!Helpers.IsValidHex(firstArgument))
+        {
+            CPH.SendMessage("Invalid BSR code!", true, false);
+            return false;
+        } 
+
+
+        CPH.SetArgument("CmdArgs", firstArgument);
+        return true;
+    }
+
 
     public bool SendRequestInfo(string bsrCode)
     {

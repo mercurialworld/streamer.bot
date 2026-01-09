@@ -2,6 +2,7 @@ public class DRMWebsocketMessage
 {
     public long Timestamp { get; set; }
     public string EventType { get; set; }
+    // man i really fucking wish C# had type unions
     public object Data { get; set; }
 }
 
