@@ -15,6 +15,18 @@ public class Main : CPHInlineBase
     private static readonly HttpClient _httpClient = new();
     private static readonly DefaultContractResolver _contractResolver = new() { NamingStrategy = new SnakeCaseNamingStrategy() };
 
+    public bool SendBotMessage(string message, string replyTo = null)
+    {
+        CPH.SetArgument("message", message);
+
+        if (!string.IsNullOrEmpty(replyTo))
+        {
+            CPH.SetArgument("replyToMessage", replyTo);
+        }
+
+        return CPH.RunActionById("5e4a052b-2e68-4107-95b1-8f1c3db06697");
+    }
+
     private async Task<bool> SendWebhookMessage(string webhookURL, DiscordWebhookMessage webhookMessage, string successMessage)
     {
 
@@ -31,11 +43,11 @@ public class Main : CPHInlineBase
         {
             if (!res.IsSuccessStatusCode)
             {
-                CPH.SendMessage($"Failed to send request (status code was {(int)res.StatusCode}).", true, false);
+                SendBotMessage($"Failed to send request (status code was {(int)res.StatusCode}).");
                 return false;
             }
 
-            CPH.SendMessage(successMessage, true, false);
+            SendBotMessage(successMessage);
             return true;
         }
         catch (Exception e)

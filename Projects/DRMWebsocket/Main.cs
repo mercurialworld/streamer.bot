@@ -10,6 +10,18 @@ public class Main : CPHInlineBase
 {
     public string TTS_VOICE = "BS TTS";
 
+    public bool SendBotMessage(string message, string replyTo = null)
+    {
+        CPH.SetArgument("message", message);
+
+        if (!string.IsNullOrEmpty(replyTo))
+        {
+            CPH.SetArgument("replyToMessage", replyTo);
+        }
+
+        return CPH.RunActionById("5e4a052b-2e68-4107-95b1-8f1c3db06697");
+    }
+
     public bool ParseWebsocketMessage()
     {
         if (!CPH.TryGetArg("message", out string message))
@@ -23,7 +35,7 @@ public class Main : CPHInlineBase
         {
             var data = (bool)serializedMessage.Data;
 
-            CPH.SendMessage($"Queue is {(data ? "open" : "closed")}!", true, false);
+            SendBotMessage($"Queue is {(data ? "open" : "closed")}!");
             return true;
         }
         else
@@ -34,22 +46,22 @@ public class Main : CPHInlineBase
             switch (serializedMessage.EventType)
             {
                 case "pressedBan":
-                    CPH.SendMessage($"{songData.BsrKey} is now banned from being requested.", true, false);
+                    SendBotMessage($"{songData.BsrKey} is now banned from being requested.");
                     CPH.SetArgument("action", "BanSong");
                     CPH.SetArgument("requestUser", songData.User);
                     break;
                 case "pressedLink":
-                    CPH.SendMessage($"{songData.Artist} - {songData.Title} (mapped by {songData.Mapper}) https://beatsaver.com/maps/{songData.BsrKey}", true, false);
+                    SendBotMessage($"{songData.Artist} - {songData.Title} (mapped by {songData.Mapper}) https://beatsaver.com/maps/{songData.BsrKey}");
                     break;
                 case "pressedPlay":
                     string requestedMapType = songData.IsWip ? "WIP" : $"request ({songData.Title} [{songData.BsrKey}])";
-                    CPH.SendMessage($"@{songData.User} your {requestedMapType} is up next!", true, false);
+                    SendBotMessage($"@{songData.User} your {requestedMapType} is up next!");
                     break;
                 case "pressedPoke":
-                    CPH.SendMessage($"@{songData.User} your request is coming up!", true, false);
+                    SendBotMessage($"@{songData.User} your request is coming up!");
                     break;
                 case "pressedSkip":
-                    CPH.SendMessage($"{songData.BsrKey} has been skipped.", true, false);
+                    SendBotMessage($"{songData.BsrKey} has been skipped.");
                     break;
                 default:
                     break;

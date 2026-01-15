@@ -12,6 +12,18 @@ public class Main : CPHInlineBase
     public string HOWTO = "To request music, in your Internet browser of choice, navigate to https://beatsaver.com and search for the song you want to see me play. Press the ! icon to copy a song code to your clipboard that you can paste here in chat!";
     public string SEARCH_HOWTO => $"Search is disabled! {HOWTO}";
 
+    public bool SendBotMessage(string message, string replyTo = null)
+    {
+        CPH.SetArgument("message", message);
+
+        if (!string.IsNullOrEmpty(replyTo))
+        {
+            CPH.SetArgument("replyToMessage", replyTo);
+        }
+
+        return CPH.RunActionById("5e4a052b-2e68-4107-95b1-8f1c3db06697");
+    }
+
     // https://github.com/TheBlackParrot-Streaming-Overlays/chat/blob/159b9ef882de066c24d9a8f23a410c812a430a3d/consts.js#L84
     private string[] funnyBeatSaberMapsToRequestToEverySingleStreamerOnTwitchEverIBetEverySingleOneOfThemWillEnjoyThem =
     [
@@ -97,7 +109,8 @@ public class Main : CPHInlineBase
         // bsr without any arguments
         if (string.IsNullOrEmpty(rawMsg))
         {
-            CPH.SendMessage(HOWTO, true, false);
+            // CPH.SendMessage(HOWTO, true, false);
+            SendBotMessage(HOWTO);
             return false;
         }
 
@@ -109,11 +122,11 @@ public class Main : CPHInlineBase
             // bsr with valid user mention instead of bsr
             if (TryGetUserMention(firstArgument))
             {
-                CPH.SendMessage($"{firstArgument} {HOWTO}", true, false);
+                SendBotMessage($"{firstArgument} {HOWTO}");
             }
             else
             {
-                CPH.SendMessage(SEARCH_HOWTO, true, false);
+                SendBotMessage(SEARCH_HOWTO);
             }
             return false;
         } 
@@ -133,14 +146,14 @@ public class Main : CPHInlineBase
         // wrong permissions
         if (!userInfo.IsVip && !userInfo.IsModerator) 
         {
-            CPH.SendMessage("You must be VIP or Moderator to use this command.", true, false);
+            SendBotMessage("You must be VIP or Moderator to use this command.");
             return false;
         }
 
         // bsr without any arguments
         if (string.IsNullOrEmpty(rawMsg))
         {
-            CPH.SendMessage("You're missing a code!", true, false);
+            SendBotMessage("You're missing a code!");
             return false;
         }
 
@@ -150,7 +163,7 @@ public class Main : CPHInlineBase
         // the actual check
         if (!Helpers.IsValidHex(firstArgument))
         {
-            CPH.SendMessage("Invalid BSR code! Format is !modadd <code> [username]", true, false);
+            SendBotMessage("Invalid BSR code! Format is !modadd <code> [username]");
             return false;
         } 
 
@@ -179,14 +192,14 @@ public class Main : CPHInlineBase
         // wrong permissions
         if (!userInfo.IsModerator) 
         {
-            CPH.SendMessage("You must be a Moderator to use this command.", true, false);
+            SendBotMessage("You must be a Moderator to use this command.");
             return false;
         }
 
         // without any arguments
         if (string.IsNullOrEmpty(rawInput))
         {
-            CPH.SendMessage("You're missing a code!", true, false);
+            SendBotMessage("You're missing a code!");
             return false;
         }
 
@@ -196,7 +209,7 @@ public class Main : CPHInlineBase
         // the actual check
         if (!Helpers.IsValidHex(firstArgument))
         {
-            CPH.SendMessage("Invalid BSR code!", true, false);
+            SendBotMessage("Invalid BSR code!");
             return false;
         } 
 
@@ -223,7 +236,7 @@ public class Main : CPHInlineBase
         // the actual check
         if (!Helpers.IsValidHex(firstArgument))
         {
-            CPH.SendMessage("Invalid BSR code!", true, false);
+            SendBotMessage("Invalid BSR code!");
             return false;
         } 
 
@@ -252,7 +265,7 @@ public class Main : CPHInlineBase
             string content = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
             // Send as message
-            CPH.SendMessage(content, true, false);
+            SendBotMessage(content);
 
             return true;
         }
@@ -321,7 +334,7 @@ public class Main : CPHInlineBase
                 // and the best part is that you won't even know you're untrusted!
                 // mess with the bull and get the horns lmfao
                 CPH.TtsSpeak(TTS_VOICE, $"untrusted user {userName} lost the 50/50");
-                CPH.TwitchReplyToMessage("Error adding request.", messageId, true, false);
+                SendBotMessage("Error adding request.", messageId);
                 return false;
             }
         }
@@ -330,7 +343,7 @@ public class Main : CPHInlineBase
         if (IsInTwitchGroup(userName, "reqbanned")) 
         {
             CPH.TtsSpeak(TTS_VOICE, $"request-banned user {userName} tried requesting something");
-            CPH.TwitchReplyToMessage("Error adding request.", messageId, true, false);
+            SendBotMessage("Error adding request.", messageId);
             return false;
         }
 
@@ -340,7 +353,7 @@ public class Main : CPHInlineBase
             var userInfo = CPH.TwitchGetUserInfoByLogin(userName);
             if (!userInfo.IsVip && !userInfo.IsModerator)
             {
-                CPH.SendMessage($"@{userName} You've been timed out for 15 seconds. Please don't request an overdone map and try again.", true, false);
+                SendBotMessage($"@{userName} You've been timed out for 15 seconds. Please don't request an overdone map and try again.");
                 CPH.TtsSpeak(TTS_VOICE, $"{userName} got themselves timed out for a little bit");
                 CPH.TwitchTimeoutUser(userName, 15, "requested funny map seriously");
                 
