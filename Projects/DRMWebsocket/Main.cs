@@ -36,6 +36,7 @@ public class Main : CPHInlineBase
             var data = (bool)serializedMessage.Data;
 
             SendBotMessage($"Queue is {(data ? "open" : "closed")}!");
+            CPH.RunAction("[DRM/Overlay] Queue Status");
             return true;
         }
         else
@@ -49,6 +50,7 @@ public class Main : CPHInlineBase
                     SendBotMessage($"{songData.BsrKey} is now banned from being requested.");
                     CPH.SetArgument("action", "BanSong");
                     CPH.SetArgument("requestUser", songData.User);
+                    CPH.RunAction("[DRM/Overlay] Queue List");
                     break;
                 case "pressedLink":
                     SendBotMessage($"{songData.Artist} - {songData.Title} (mapped by {songData.Mapper}) https://beatsaver.com/maps/{songData.BsrKey}");
@@ -56,12 +58,18 @@ public class Main : CPHInlineBase
                 case "pressedPlay":
                     string requestedMapType = songData.IsWip ? "WIP" : $"request ({songData.Title} [{songData.BsrKey}])";
                     SendBotMessage($"@{songData.User} your {requestedMapType} is up next!");
+                    CPH.RunAction("[DRM/Overlay] Queue List");
                     break;
                 case "pressedPoke":
                     SendBotMessage($"@{songData.User} your request is coming up!");
                     break;
                 case "pressedSkip":
                     SendBotMessage($"{songData.BsrKey} has been skipped.");
+                    CPH.RunAction("[DRM/Overlay] Queue List");
+                    break;
+                case "mapReAdded":
+                case "mapRemoved":
+                    CPH.RunAction("[DRM/Overlay] Queue List");
                     break;
                 default:
                     break;
