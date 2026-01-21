@@ -1,4 +1,3 @@
-using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Streamer.bot.Plugin.Interface;
@@ -37,7 +36,10 @@ public class Main : CPHInlineBase
 
             SendBotMessage($"Queue is {(data ? "open" : "closed")}!");
             CPH.RunAction("[DRM/Overlay] Queue Status");
-            return true;
+        }
+        else if (serializedMessage.EventType.Equals("queueCleared"))
+        {
+            CPH.RunAction("[DRM/Overlay] Queue List");
         }
         else
         {
@@ -74,7 +76,8 @@ public class Main : CPHInlineBase
                 default:
                     break;
             }
-            return true;
         }
+
+        return true;
     }
 }
