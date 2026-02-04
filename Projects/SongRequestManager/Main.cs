@@ -10,7 +10,7 @@ namespace SBot.Projects.SongRequestManager;
 
 public class Main : CPHInlineBase
 {
-    private string SONGLINK_API = "https://api.song.link/v1-alpha.1/links?url=";
+    private string SONGLINK_API = "https://api.song.link/v1-alpha.1/links?userCountry=CA&url=";
     private string CIDER_QUEUE_LINK = "http://localhost:10767/api/v1/playback/play-next";
 
     private static readonly HttpClient _httpClient = new();
@@ -100,7 +100,7 @@ public class Main : CPHInlineBase
     {
         CiderPlayNextBody ciderPlayNext = new()
         {
-            Type = "song",
+            Type = "songs",
             Id = appleMusicSongID
         };
 
