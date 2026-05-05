@@ -7,7 +7,10 @@ namespace SBot.Projects.DRMWebsocket;
 
 public class Main : CPHInlineBase
 {
-    public string TTS_VOICE = "BS TTS";
+    private readonly string TTS_VOICE = "SystemTTS";
+    private readonly string CHANGE_STATUS = "efe4ada8-a09c-429c-b321-6bc6e3fba3b8";
+    private readonly string CHANGE_LIST = "a87d4e81-5830-46e6-acef-2653661c83db";
+
 
     public bool SendBotMessage(string message, string replyTo = null)
     {
@@ -35,11 +38,11 @@ public class Main : CPHInlineBase
             var data = (bool)serializedMessage.Data;
 
             SendBotMessage($"Queue is {(data ? "open" : "closed")}!");
-            CPH.RunAction("[DRM/Overlay] Queue Status");
+            CPH.RunActionById(CHANGE_STATUS);
         }
         else if (serializedMessage.EventType.Equals("queueCleared"))
         {
-            CPH.RunAction("[DRM/Overlay] Queue List");
+            CPH.RunActionById(CHANGE_LIST);
         }
         else
         {
@@ -52,7 +55,7 @@ public class Main : CPHInlineBase
                     SendBotMessage($"{songData.BsrKey} is now banned from being requested.");
                     CPH.SetArgument("action", "BanSong");
                     CPH.SetArgument("requestUser", songData.User);
-                    CPH.RunAction("[DRM/Overlay] Queue List");
+                    CPH.RunActionById(CHANGE_LIST);
                     break;
                 case "pressedLink":
                     SendBotMessage($"{songData.Artist} - {songData.Title} (mapped by {songData.Mapper}) https://beatsaver.com/maps/{songData.BsrKey}");
@@ -60,18 +63,18 @@ public class Main : CPHInlineBase
                 case "pressedPlay":
                     string requestedMapType = songData.IsWip ? "WIP" : $"request ({songData.Title} [{songData.BsrKey}])";
                     SendBotMessage($"@{songData.User} your {requestedMapType} is up next!");
-                    CPH.RunAction("[DRM/Overlay] Queue List");
+                    CPH.RunActionById(CHANGE_LIST);
                     break;
                 case "pressedPoke":
                     SendBotMessage($"@{songData.User} your request is coming up!");
                     break;
                 case "pressedSkip":
                     SendBotMessage($"{songData.BsrKey} has been skipped.");
-                    CPH.RunAction("[DRM/Overlay] Queue List");
+                    CPH.RunActionById(CHANGE_LIST);
                     break;
                 case "mapReAdded":
                 case "mapRemoved":
-                    CPH.RunAction("[DRM/Overlay] Queue List");
+                    CPH.RunActionById(CHANGE_LIST);
                     break;
                 default:
                     break;
