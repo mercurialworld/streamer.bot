@@ -8,7 +8,7 @@ namespace SBot.Projects.DumbRequestManager;
 
 public class Main : CPHInlineBase
 {
-    public string TTS_VOICE = "BS TTS";
+    public string TTS_VOICE = "SystemTTS";
     public string HOWTO = "To request music, in your Internet browser of choice, navigate to https://beatsaver.com and search for the song you want to see me play. Press the ! icon to copy a song code to your clipboard that you can paste here in chat!";
     public string SEARCH_HOWTO => $"Search is disabled! {HOWTO}";
 
@@ -172,7 +172,7 @@ public class Main : CPHInlineBase
             string secondArgument = args[1];
             if (TryGetUserMention(secondArgument))
             {
-                originalRequester = secondArgument;
+                originalRequester = secondArgument.TrimStart(['@']);
             }
         }
 
@@ -406,6 +406,26 @@ public class Main : CPHInlineBase
 
         CPH.SetArgument("bsr", bsrCode);
         CPH.SetArgument("originalRequester", originalRequester);
+
+        return true;
+    }
+
+    public bool BSRNDCheck()
+    {
+        if (!CPH.TryGetArg("userName", out string userName) || !CPH.TryGetArg("randomKey", out string bsrCode))
+        {
+            return false;
+        }
+
+        if (
+            !SendRequestInfo(bsrCode) || !SpeakRequestInfo(bsrCode, $"{userName} via redeem")
+        )
+        {
+            return false;
+        }
+
+        CPH.SetArgument("bsr", bsrCode);
+        CPH.SetArgument("bsrndRequester", $"{userName}@BSRND");
 
         return true;
     }
