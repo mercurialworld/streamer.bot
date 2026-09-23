@@ -1,8 +1,6 @@
 using System;
-using System.Linq;
 using System.Net.Http;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Streamer.bot.Plugin.Interface;
 using Streamer.bot.Plugin.Interface.Enums;
@@ -164,6 +162,13 @@ public class Main : CPHInlineBase
             MapInfo parsed = JsonConvert.DeserializeObject<MapInfo>(content);
 
             // [TODO] move to its own function
+            string messageToSend = $"{parsed.Metadata.Artist} - {parsed.Metadata.Title} ({parsed.Metadata.Mapper})";
+            messageToSend += $" [{parsed.Metadata.Tempo} BPM] [{parsed.Votes.Score}% (👍 {parsed.Votes.Up} / 👎 {parsed.Votes.Down})]";
+            TimeSpan duration = TimeSpan.FromSeconds(parsed.Metadata.Duration);
+            messageToSend += $" (⏳ {string.Format("{0:D2}:{1:D2}", (int)Math.Floor(duration.TotalMinutes), duration.Seconds)})";
+            DateTimeOffset lastUpdate = DateTimeOffset.FromUnixTimeSeconds(parsed.LastPublish);
+            messageToSend += $" (📅 {lastUpdate:yyyy-MM-dd})";
+            messageToSend += $" || https://beatsaver.com/maps/{bsrCode}";
 
             messageToSpeak += $"bsr {bsrSplit}";
 
@@ -173,6 +178,7 @@ public class Main : CPHInlineBase
             }
 
             CPH.TtsSpeak(BotMessages.TTS_VOICE, messageToSpeak.ToString(), false);
+            SendBotMessage(messageToSend);
 
             return true;
         }
