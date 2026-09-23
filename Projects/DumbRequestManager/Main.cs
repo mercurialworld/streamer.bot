@@ -36,7 +36,7 @@ public class Main : CPHInlineBase
 
         RequestArgs reqArgs = Helpers.NormalizeMessage(rawMsg);
 
-        if (reqArgs.BsrKey.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(reqArgs.BsrKey))
         {
             SendBotMessage(BotMessages.HOWTO);
             return false;
@@ -65,7 +65,7 @@ public class Main : CPHInlineBase
 
         RequestArgs reqArgs = Helpers.NormalizeMessage(rawMsg);
 
-        if (reqArgs.BsrKey.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(reqArgs.BsrKey))
         {
             SendBotMessage("Map ID is either missing or invalid!");
             return false;
@@ -74,7 +74,7 @@ public class Main : CPHInlineBase
         {
             bsrCode = reqArgs.BsrKey;
 
-            if (!reqArgs.Requester.IsNullOrEmpty())
+            if (!string.IsNullOrEmpty(reqArgs.Requester))
             {
                 originalRequester = reqArgs.Requester;
             }
@@ -101,7 +101,7 @@ public class Main : CPHInlineBase
 
         RequestArgs reqArgs = Helpers.NormalizeMessage(rawMsg);
 
-        if (reqArgs.BsrKey.IsNullOrEmpty())
+        if (string.IsNullOrEmpty(reqArgs.BsrKey))
         {
             SendBotMessage("Map ID is either missing or invalid!");
             return false;
