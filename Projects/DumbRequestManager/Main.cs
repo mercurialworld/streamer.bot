@@ -1,16 +1,19 @@
 using System;
+using System.Linq;
 using System.Net.Http;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Streamer.bot.Plugin.Interface;
 using Streamer.bot.Plugin.Interface.Enums;
+using WebSocketSharp;
 
 namespace SBot.Projects.DumbRequestManager;
 
 public class Main : CPHInlineBase
 {
-    public string TTS_VOICE = "SystemTTS";
-    public string HOWTO = "To request music, in your Internet browser of choice, navigate to https://beatsaver.com and search for the song you want to see me play. Press the ! icon to copy a song code to your clipboard that you can paste here in chat!";
-    public string SEARCH_HOWTO => $"Search is disabled! {HOWTO}";
+    private static readonly DefaultContractResolver _contractResolver = new() { NamingStrategy = new CamelCaseNamingStrategy() };
+    private readonly WebClient _client = new();
 
     public bool SendBotMessage(string message, string replyTo = null)
     {
@@ -24,115 +27,27 @@ public class Main : CPHInlineBase
         return CPH.RunActionById("5e4a052b-2e68-4107-95b1-8f1c3db06697");
     }
 
-    // https://github.com/TheBlackParrot-Streaming-Overlays/chat/blob/159b9ef882de066c24d9a8f23a410c812a430a3d/consts.js#L84
-    private string[] funnyBeatSaberMapsToRequestToEverySingleStreamerOnTwitchEverIBetEverySingleOneOfThemWillEnjoyThem =
-    [
-        "25f",
-        "6136",
-        "7269",
-        "5f22",
-        "ffb6",
-        "110db",
-        "103d8",
-        "d1cc",
-        "b",
-        "1a209",
-        "c32d",
-        "922f",
-        "871a",
-        "10c9b",
-        "1e99",
-        "1eb9",
-        "2a121",
-        "24188",
-        "46d4",
-        "24b58",
-        "557f",
-        "1f89a",
-        "335c",
-        "e621",
-        "2c2f4",
-        "11cf8",
-        "21ef9",
-        "ff9",
-        "3b608",
-        "cffd",
-        "10dcc",
-        "376da",
-        "1f7c9",
-        "108ee",
-        "352b3",
-        "352b7",
-        "21d9",
-        "4e8d",
-        "148e9",
-        "15af0",
-        "20291",
-        "11b28",
-        "fd07",
-        "1a524",
-        "34b8c",
-        "16a58",
-        "6777",
-        "1db5d"
-    ];
-
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
-
-    public void Init()
-    {
-        // Ensure we are working with a clean slate
-        _httpClient.DefaultRequestHeaders.Clear();
-    }
-
-    public void Dispose()
-    {
-        // Free up allocations
-        _httpClient.Dispose();
-    }
-
     private bool IsInTwitchGroup(string userName, string group)
     {
         return CPH.UserInGroup(userName, Platform.Twitch, group);
-    }
-
-    private bool TryGetUserMention(string possiblyUser)
-    {
-        // can the string resolve to a valid username, or does it start with an @ (for intl name)?      
-        return Helpers.IsValidTwitchLogin(possiblyUser) || possiblyUser.StartsWith("@");
     }
     
     public bool RequestBSRCheck(string rawMsg, out string bsrCode)
     {
         bsrCode = null;
-        
-        // bsr without any arguments
-        if (string.IsNullOrEmpty(rawMsg))
+
+        RequestArgs reqArgs = Helpers.NormalizeMessage(rawMsg);
+
+        if (reqArgs.BsrKey.IsNullOrEmpty())
         {
-            // CPH.SendMessage(HOWTO, true, false);
-            SendBotMessage(HOWTO);
+            SendBotMessage(BotMessages.HOWTO);
             return false;
         }
-
-        string firstArgument = rawMsg.Split(' ')[0];
-        
-        // the actual check
-        if (!Helpers.IsValidHex(firstArgument))
+        else
         {
-            // bsr with valid user mention instead of bsr
-            if (TryGetUserMention(firstArgument))
-            {
-                SendBotMessage($"{firstArgument} {HOWTO}");
-            }
-            else
-            {
-                SendBotMessage(SEARCH_HOWTO);
-            }
-            return false;
-        } 
+            bsrCode = reqArgs.BsrKey;
+        }
 
-        // ok we're good
-        bsrCode = firstArgument;
         return true;
     }
 
@@ -150,37 +65,27 @@ public class Main : CPHInlineBase
             return false;
         }
 
-        // bsr without any arguments
-        if (string.IsNullOrEmpty(rawMsg))
+        RequestArgs reqArgs = Helpers.NormalizeMessage(rawMsg);
+
+        if (reqArgs.BsrKey.IsNullOrEmpty())
         {
-            SendBotMessage("You're missing a code!");
+            SendBotMessage("Map ID is either missing or invalid!");
             return false;
         }
-
-        var args = rawMsg.Split(' ');
-        string firstArgument = args[0];
-
-        // the actual check
-        if (!Helpers.IsValidHex(firstArgument))
+        else
         {
-            SendBotMessage("Invalid BSR code! Format is !modadd <code> [username]");
-            return false;
-        } 
+            bsrCode = reqArgs.BsrKey;
 
-        if (args.Length > 1)
-        {
-            string secondArgument = args[1];
-            if (TryGetUserMention(secondArgument))
+            if (!reqArgs.Requester.IsNullOrEmpty())
             {
-                originalRequester = secondArgument.TrimStart(['@']);
+                originalRequester = reqArgs.Requester;
             }
         }
 
-        bsrCode = firstArgument;
         return true;
     }
 
-    public bool RemoveBSRCheck()
+    public bool RemoveBSRCheck(string rawMsg)
     {
         if (!CPH.TryGetArg("userName", out string userName) || !CPH.TryGetArg("rawInput", out string rawInput))
         {
@@ -196,24 +101,18 @@ public class Main : CPHInlineBase
             return false;
         }
 
-        // without any arguments
-        if (string.IsNullOrEmpty(rawInput))
+        RequestArgs reqArgs = Helpers.NormalizeMessage(rawMsg);
+
+        if (reqArgs.BsrKey.IsNullOrEmpty())
         {
-            SendBotMessage("You're missing a code!");
+            SendBotMessage("Map ID is either missing or invalid!");
             return false;
         }
-
-        var args = rawInput.Split(' ');
-        string firstArgument = args[0];
-
-        // the actual check
-        if (!Helpers.IsValidHex(firstArgument))
+        else
         {
-            SendBotMessage("Invalid BSR code!");
-            return false;
-        } 
+            CPH.SetArgument("bsr", reqArgs.BsrKey);
+        }
 
-        CPH.SetArgument("bsr", firstArgument);
         return true;
     }
 
@@ -245,71 +144,43 @@ public class Main : CPHInlineBase
         return true;
     }
 
-
-    public bool SendRequestInfo(string bsrCode)
-    {
-        HttpResponseMessage res = 
-            _httpClient
-                .GetAsync($"https://theblackparrot.me/bs/bsr-filter/index.php?hash={bsrCode}")
-                .GetAwaiter()
-                .GetResult();
-        try
-        {
-            if (!res.IsSuccessStatusCode)
-            {
-                CPH.TtsSpeak(TTS_VOICE, "Error in querying map", false);
-                return false;
-            }
-
-            // Get the response data
-            string content = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-
-            // Send as message
-            SendBotMessage(content);
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            CPH.LogError(e.Message);
-            return false;
-        }
-    }
-
-    public bool SpeakRequestInfo(string bsrCode, string userName, bool IsModAdd = false)
+    public bool GetRequestInfo(string bsrCode, string userName, bool IsModAdd = false)
     {
         string messageToSpeak = $"{userName} {(IsModAdd ? "modadded" : "requested")} ";
+        string bsrSplit = string.Join(" ", bsrCode.Split());
 
-        HttpResponseMessage res = 
-            _httpClient.GetAsync($"https://api.beatsaver.com/maps/id/{bsrCode}")   
-                .GetAwaiter()
-                .GetResult();
+        HttpResponseMessage res = _client.GetRequestSync($"https://theblackparrot.me/bs/bsr-filter/index.php?hash={bsrCode}&format=json");
+
         try
         {
             if (!res.IsSuccessStatusCode)
             {
-                CPH.TtsSpeak(TTS_VOICE, "Error in querying map", false);
+                CPH.TtsSpeak(BotMessages.TTS_VOICE, $"Couldn't get map {bsrSplit}", false);
                 return false;
             }
 
             // Get the response data
             string content = res.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            MapInfo parsed = JsonConvert.DeserializeObject<MapInfo>(content);
 
-            JObject parsed = JObject.Parse(content);
-            messageToSpeak += $"bsr {bsrCode}";
+            // [TODO] move to its own function
+
+            messageToSpeak += $"bsr {bsrSplit}";
 
             if (!IsModAdd)
             {
-                messageToSpeak += $" {(string)parsed.SelectToken("metadata.songName")} by {(string)parsed.SelectToken("metadata.songAuthorName")} mapped by {(string)parsed.SelectToken("metadata.levelAuthorName")}";
+                messageToSpeak += $" {parsed.Metadata.Title} by {parsed.Metadata.Artist} mapped by {parsed.Metadata.Mapper}";
             }
 
-            CPH.TtsSpeak(TTS_VOICE, messageToSpeak.ToString(), false);
+            CPH.TtsSpeak(BotMessages.TTS_VOICE, messageToSpeak.ToString(), false);
 
             return true;
         }
         
         catch (Exception e)
         {
+
+            CPH.TtsSpeak(BotMessages.TTS_VOICE, $"Couldn't get map {bsrSplit}", false);
             CPH.LogError(e.Message);
             return false;
         }
@@ -333,7 +204,7 @@ public class Main : CPHInlineBase
             {
                 // and the best part is that you won't even know you're untrusted!
                 // mess with the bull and get the horns lmfao
-                CPH.TtsSpeak(TTS_VOICE, $"untrusted user {userName} lost the 50/50");
+                CPH.TtsSpeak(BotMessages.TTS_VOICE, $"untrusted user {userName} lost the 50/50");
                 SendBotMessage("Error adding request.", messageId);
                 return false;
             }
@@ -342,19 +213,19 @@ public class Main : CPHInlineBase
         // TODO: have a strike system for this; rn it's being given manually
         if (IsInTwitchGroup(userName, "reqbanned")) 
         {
-            CPH.TtsSpeak(TTS_VOICE, $"request-banned user {userName} tried requesting something");
+            CPH.TtsSpeak(BotMessages.TTS_VOICE, $"request-banned user {userName} tried requesting something");
             SendBotMessage("Error adding request.", messageId);
             return false;
         }
 
         // if someone tries to request a funny they get timed out for 15 seconds
-        if (Array.Exists(funnyBeatSaberMapsToRequestToEverySingleStreamerOnTwitchEverIBetEverySingleOneOfThemWillEnjoyThem, x => x == bsrCode))
+        if (Array.Exists(Helpers.funnyBeatSaberMapsToRequestToEverySingleStreamerOnTwitchEverIBetEverySingleOneOfThemWillEnjoyThem, x => x == bsrCode))
         {
             var userInfo = CPH.TwitchGetUserInfoByLogin(userName);
             if (!userInfo.IsVip && !userInfo.IsModerator)
             {
                 SendBotMessage($"@{userName} You've been timed out for 15 seconds. Please don't request an overdone map and try again.");
-                CPH.TtsSpeak(TTS_VOICE, $"{userName} got themselves timed out for a little bit");
+                CPH.TtsSpeak(BotMessages.TTS_VOICE, $"{userName} got themselves timed out for a little bit");
                 CPH.TwitchTimeoutUser(userName, 15, "requested funny map seriously");
                 
                 // i no longer trust you to have good requests now
@@ -375,7 +246,7 @@ public class Main : CPHInlineBase
 
         if (
             !RequestBSRCheck(rawInput, out var bsrCode) ||
-            !SendRequestInfo(bsrCode) || !SpeakRequestInfo(bsrCode, userName) ||
+            !GetRequestInfo(bsrCode, userName) ||
             !FilterUserGroups(bsrCode, userName)
         )
         {
@@ -397,7 +268,7 @@ public class Main : CPHInlineBase
 
         if (
             !ModaddBSRCheck(rawInput, userName, out var bsrCode, out var originalRequester) ||
-            !SpeakRequestInfo(bsrCode, userName, true)
+            !GetRequestInfo(bsrCode, userName, true)
         )
         {
             return false;
@@ -418,7 +289,7 @@ public class Main : CPHInlineBase
         }
 
         if (
-            !SendRequestInfo(bsrCode) || !SpeakRequestInfo(bsrCode, $"{userName} via redeem")
+            !GetRequestInfo(bsrCode, $"{userName} via redeem")
         )
         {
             return false;
